@@ -2,7 +2,8 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 
 
-class User(AbstractUser):
+class Signup(AbstractUser):
+    email = models.EmailField()
     first_name = models.CharField(max_length=150, blank=False, null=False)
     last_name = models.CharField(max_length=150, blank=False, null=False)
 
@@ -24,3 +25,8 @@ class User(AbstractUser):
 
     REQUIRED_FIELDS = ["email", "password", "first_name", "last_name"]
     USERNAME_FIELD = "email"
+
+
+class Login(models.Model):
+    email = models.EmailField()
+    password = models.CharField(max_length=128)
