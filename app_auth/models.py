@@ -3,9 +3,10 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 
 
 class Signup(AbstractUser):
+    password = models.CharField(max_length=128)
     email = models.EmailField()
-    first_name = models.CharField(max_length=150, blank=False, null=False)
-    last_name = models.CharField(max_length=150, blank=False, null=False)
+    first_name = models.CharField(max_length=150)
+    last_name = models.CharField(max_length=150)
 
     groups = models.ManyToManyField(
         Group,
