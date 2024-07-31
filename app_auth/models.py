@@ -3,10 +3,12 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 
 
 class User(AbstractUser):
-    password = models.CharField(max_length=128)
+    password = models.CharField(max_length=128, null=False, blank=False)
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=150)
-    last_name = models.CharField(max_length=150)
+    is_verified = models.BooleanField(default=False)
+    otp = models.CharField(max_length=6, default="")
+    first_name = models.CharField(max_length=150, null=False, blank=False)
+    last_name = models.CharField(max_length=150, null=False, blank=False)
 
     groups = models.ManyToManyField(
         Group,
@@ -24,10 +26,21 @@ class User(AbstractUser):
         verbose_name="user permissions",
     )
 
-    REQUIRED_FIELDS = ["email", "password", "first_name", "last_name"]
+    REQUIRED_FIELDS = []
     USERNAME_FIELD = "email"
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.username = self.email
+        super().save(*args, **kwargs)
+
+    def name(self):
+        return "{} {}".format(self.first_name, self.last_name)
+
+    def __str__(self) -> str:
+        return self.email
 
 
 class Login(models.Model):
-    email = models.EmailField()
-    password = models.CharField(max_length=128)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128, null=False, blank=False)

@@ -36,13 +36,22 @@ def get_tokens_for_user(user) -> str:
     return str(refresh.access_token)
 
 
+def send_otp(user: User):
+    user.email_user(
+        "Account Verification",
+        "Verification Email",
+        "Don't Reply <{}>".format(settings.EMAIL_HOST_USER),
+    )
+
+
 def get_error_response(errors, status):
+    print(errors)
     error = "Unknown error"
     for key, value in errors.items():
         if value[0].code == "required":
             value = value[0].__str__()[5:]
             error = "{} {}".format(key, value)
-        elif value[0].code == "invalid":
+        else:
             error = value[0].__str__()
         break
 
@@ -55,6 +64,7 @@ class Auth:
         serializer = UserSerializer(data=request.data)
 
         if serializer.is_valid():
+            send_otp(serializer.save())
             return Response(serializer.data, status=200)
         else:
             return get_error_response(serializer.errors, status=400)
