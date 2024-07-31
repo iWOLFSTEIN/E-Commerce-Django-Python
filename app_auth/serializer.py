@@ -1,13 +1,13 @@
-from app_auth.models import Login, Signup
+from app_auth.models import Login, User
 from rest_framework import serializers
 
 
-class SignupSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     firstName = serializers.CharField(source="first_name")
     lastName = serializers.CharField(source="last_name")
 
     class Meta:
-        model = Signup
+        model = User
         fields = ["email", "password", "firstName", "lastName"]
         extra_kwargs = {"password": {"write_only": True}}
 
