@@ -1,11 +1,14 @@
 from functools import wraps
 
+from celery import shared_task
 import jwt
-from app_auth.models import User
+from app_auth.models import User, UserVerification
 from app_auth.serializer import LoginSerializer, UserSerializer
 from rest_framework.response import Response
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
+import pyotp
+from datetime import datetime, timedelta
 
 
 def verifyJwtToken(func):
@@ -36,11 +39,54 @@ def get_tokens_for_user(user) -> str:
     return str(refresh.access_token)
 
 
-def send_otp(user: User):
+def verify_user(user: User):
+    user_verification = UserVerification(user=user)
+    user_verification.otp = int(
+        generate_otp(user=user, user_verification=user_verification)
+    )
+    user_verification.next_possible_attempt = datetime.now() + timedelta(
+        seconds=((user_verification.otp_attempt_counter + 1) * 30)
+    )
+    user_verification.secret_key = pyotp.random_base32()
+    user_verification.save()
+    send_otp_email.delay(user.id, user_verification.otp)
+
+
+def generate_otp(user: User, user_verification: UserVerification):
+    hotp = pyotp.HOTP(user_verification.secret_key)
+    otp = hotp.at(user_verification.otp_attempt_counter)
+    return otp
+
+
+@shared_task
+def send_otp_email(userId: str, otp: int):
+    user = User.objects.get(id=userId)
     user.email_user(
         "Account Verification",
-        "Verification Email",
-        "Don't Reply <{}>".format(settings.EMAIL_HOST_USER),
+        otp_email_body(name=user.name(), otp=otp),
+        "XYZ Verification <{}>".format(settings.EMAIL_HOST_USER),
+    )
+
+
+def otp_email_body(name: str, otp: int) -> str:
+    return """Dear {},
+
+Thank you for registering with XYZ. To complete your account verification, please use the following One-Time Password (OTP):
+
+Your OTP Code: {} 
+
+Please enter this code in the verification section of our website/app to complete your account setup.
+
+If you did not initiate this request, please ignore this email or contact our support team immediately.
+
+Best regards,
+
+The XYZ Team
+
++12 345 6789012
+xyz@xyz.com
+""".format(
+        name, otp
     )
 
 
@@ -64,7 +110,11 @@ class Auth:
         serializer = UserSerializer(data=request.data)
 
         if serializer.is_valid():
-            send_otp(serializer.save())
+            user = serializer.save()
+            try:
+                verify_user(user=user)
+            except Exception as e:
+                print(e)
             return Response(serializer.data, status=200)
         else:
             return get_error_response(serializer.errors, status=400)

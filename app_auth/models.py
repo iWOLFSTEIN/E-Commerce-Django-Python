@@ -1,12 +1,13 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 
+from app_auth.managers import UserManager
+
 
 class User(AbstractUser):
     password = models.CharField(max_length=128, null=False, blank=False)
     email = models.EmailField(unique=True)
     is_verified = models.BooleanField(default=False)
-    otp = models.CharField(max_length=6, default="")
     first_name = models.CharField(max_length=150, null=False, blank=False)
     last_name = models.CharField(max_length=150, null=False, blank=False)
 
@@ -26,6 +27,8 @@ class User(AbstractUser):
         verbose_name="user permissions",
     )
 
+    objects = UserManager()
+
     REQUIRED_FIELDS = []
     USERNAME_FIELD = "email"
 
@@ -44,3 +47,11 @@ class User(AbstractUser):
 class Login(models.Model):
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=128, null=False, blank=False)
+
+
+class UserVerification(models.Model):
+    user = models.ForeignKey(to=User, on_delete=models.CASCADE)
+    otp = models.IntegerField()
+    otp_attempt_counter = models.IntegerField(default=0)
+    next_possible_attempt = models.DateTimeField()
+    secret_key = models.CharField(max_length=32, default='')
