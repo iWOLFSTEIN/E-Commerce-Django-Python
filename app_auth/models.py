@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 
@@ -5,6 +6,7 @@ from app_auth.managers import UserManager
 
 
 class User(AbstractUser):
+    _id = models.CharField(default=uuid.uuid4().hex, max_length=24)
     password = models.CharField(max_length=128, null=False, blank=False)
     email = models.EmailField(unique=True)
     is_verified = models.BooleanField(default=False)
@@ -54,4 +56,4 @@ class UserVerification(models.Model):
     otp = models.IntegerField()
     otp_attempt_counter = models.IntegerField(default=0)
     next_possible_attempt = models.DateTimeField()
-    secret_key = models.CharField(max_length=32, default='')
+    secret_key = models.CharField(max_length=32, default="")

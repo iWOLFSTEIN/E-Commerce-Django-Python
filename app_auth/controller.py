@@ -34,7 +34,7 @@ def verifyJwtToken(func):
     return decorator
 
 
-def get_tokens_for_user(user) -> str:
+def get_token_for_user(user) -> str:
     refresh = RefreshToken.for_user(user)
     return str(refresh.access_token)
 
@@ -111,18 +111,38 @@ class Auth:
 
         if serializer.is_valid():
             user = serializer.save()
+            token = get_token_for_user(user)
             try:
                 verify_user(user=user)
+                pass
             except Exception as e:
                 print(e)
-            return Response(serializer.data, status=200)
+            return Response(
+                {
+                    "user": UserSerializer(user).data,
+                    "token": token,
+                    "message": "Success!",
+                },
+                status=200,
+            )
         else:
             return get_error_response(serializer.errors, status=400)
 
     def login(request):
         serializer = LoginSerializer(data=request.data)
-
-        if serializer.is_valid():
-            return Response(serializer.data)
-        else:
+        if not serializer.is_valid():
             return get_error_response(serializer.errors, status=400)
+
+        user = User.objects.get(email=serializer.data.get("email"))
+        if not user:
+            return Response({"error": "User does not exist!"}, status=404)
+
+        token = get_token_for_user(user)
+        return Response(
+            {
+                "user": UserSerializer(user).data,
+                "token": token,
+                "message": "Success!",
+            },
+            status=200,
+        )
