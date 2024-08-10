@@ -3,7 +3,11 @@ from functools import wraps
 from celery import shared_task
 import jwt
 from app_auth.models import User, UserVerification
-from app_auth.serializer import LoginSerializer, UserSerializer
+from app_auth.serializer import (
+    LoginSerializer,
+    OtpVerificationSerializer,
+    UserSerializer,
+)
 from rest_framework.response import Response
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -11,7 +15,7 @@ import pyotp
 from datetime import datetime, timedelta
 
 
-def verifyJwtToken(func):
+def verify_jwt_token(func):
     @wraps(func)
     def decorator(request):
         token = str(request.auth)
@@ -19,17 +23,17 @@ def verifyJwtToken(func):
             payload = jwt.decode(
                 jwt=token, key=settings.SECRET_KEY, algorithms=["HS256"]
             )
-            user = User.objects.get(id=payload["id"])
+            user = User.objects.get(id=payload["user_id"])
             if not user.is_active:
                 user.is_active = True
                 user.save()
             return func(request, user)
         except jwt.ExpiredSignatureError as e:
             print(e)
-            return Response({"error": "Activations link expired"}, status=400)
+            return Response({"error": "Token expired"}, status=401)
         except jwt.exceptions.DecodeError as e:
             print(e)
-            return Response({"error": "Invalid Token"}, status=400)
+            return Response({"error": "Invalid Token"}, status=401)
 
     return decorator
 
@@ -39,22 +43,23 @@ def get_token_for_user(user) -> str:
     return str(refresh.access_token)
 
 
-def verify_user(user: User):
-    user_verification = UserVerification(user=user)
+def send_otp(user: User):
+    user_verification = UserVerification(user=user, secret_key=pyotp.random_base32())
     user_verification.otp = int(
         generate_otp(user=user, user_verification=user_verification)
     )
-    user_verification.next_possible_attempt = datetime.now() + timedelta(
-        seconds=((user_verification.otp_attempt_counter + 1) * 30)
-    )
-    user_verification.secret_key = pyotp.random_base32()
-    user_verification.save()
+
     send_otp_email.delay(user.id, user_verification.otp)
 
 
 def generate_otp(user: User, user_verification: UserVerification):
     hotp = pyotp.HOTP(user_verification.secret_key)
+    user_verification.otp_attempt_counter = user_verification.otp_attempt_counter + 1
     otp = hotp.at(user_verification.otp_attempt_counter)
+    user_verification.next_possible_attempt = datetime.now() + timedelta(
+        seconds=((user_verification.otp_attempt_counter + 1) * 30)
+    )
+    user_verification.save()
     return otp
 
 
@@ -113,15 +118,15 @@ class Auth:
             user = serializer.save()
             token = get_token_for_user(user)
             try:
-                verify_user(user=user)
+                send_otp(user=user)
                 pass
             except Exception as e:
-                print(e)
+                print("console error:" + e.__str__())
             return Response(
                 {
                     "user": UserSerializer(user).data,
                     "token": token,
-                    "message": "Success!",
+                    "message": "Signup successful",
                 },
                 status=200,
             )
@@ -142,7 +147,28 @@ class Auth:
             {
                 "user": UserSerializer(user).data,
                 "token": token,
-                "message": "Success!",
+                "message": "Login successful",
             },
             status=200,
         )
+
+    @verify_jwt_token
+    def verify_otp(request, user: User):
+        serializer = OtpVerificationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return get_error_response(serializer.errors, status=400)
+
+        user_verification = UserVerification.objects.get(user=user)
+        hotp = pyotp.HOTP(user_verification.secret_key)
+        is_verified = hotp.verify(
+            request.data.get("otp"), user_verification.otp_attempt_counter
+        )
+        if not is_verified:
+            return Response({"status": False, "message": "Invalid otp"}, status=401)
+
+        user.is_verified = is_verified
+        user.save()
+
+        return Response({"status": True, "message": "Otp verification is successful"})
+    
+    

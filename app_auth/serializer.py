@@ -1,4 +1,4 @@
-from app_auth.models import Login, User
+from app_auth.models import Login, OtpVerification, User
 from rest_framework import serializers
 
 
@@ -8,7 +8,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["_id", "email", "password", "firstName", "lastName"]
+        fields = ["id", "email", "password", "firstName", "lastName"]
         extra_kwargs = {"password": {"write_only": True}}
 
 
@@ -17,3 +17,9 @@ class LoginSerializer(serializers.ModelSerializer):
         model = Login
         fields = "__all__"
         extra_kwargs = {"password": {"write_only": True}}
+
+
+class OtpVerificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OtpVerification
+        fields = "__all__"

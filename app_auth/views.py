@@ -10,3 +10,8 @@ class Signup(APIView):
 class Login(APIView):
     def post(self, request, format=None):
         return Auth.login(request)
+
+
+class Otp(APIView):
+    def post(self, request, format=None):
+        return Auth.verify_otp(request)
