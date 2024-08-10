@@ -6,12 +6,14 @@ from app_auth.managers import UserManager
 
 
 class User(AbstractUser):
-    _id = models.CharField(default=uuid.uuid4().hex, max_length=24)
+    _id = models.CharField(default=uuid.uuid4().hex, max_length=24, primary_key=True)
+    username = None
     password = models.CharField(max_length=128, null=False, blank=False)
     email = models.EmailField(unique=True)
     is_verified = models.BooleanField(default=False)
     first_name = models.CharField(max_length=150, null=False, blank=False)
     last_name = models.CharField(max_length=150, null=False, blank=False)
+    ordering = ("email")
 
     groups = models.ManyToManyField(
         Group,
