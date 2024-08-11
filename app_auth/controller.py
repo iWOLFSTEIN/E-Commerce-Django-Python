@@ -138,9 +138,16 @@ class Auth:
         if not serializer.is_valid():
             return get_error_response(serializer.errors, status=400)
 
-        user = User.objects.get(email=serializer.data.get("email"))
-        if not user:
+        try:
+            user = User.objects.get(email=serializer.data.get("email"))
+        except User.DoesNotExist:
             return Response({"error": "User does not exist!"}, status=404)
+
+        password = request.data.get("password")
+
+        print(serializer.data)
+        if not user.check_password(password):
+            return Response({"error": "Invalid password!"}, status=401)
 
         token = get_token_for_user(user)
         return Response(
@@ -170,5 +177,3 @@ class Auth:
         user.save()
 
         return Response({"status": True, "message": "Otp verification is successful"})
-    
-    

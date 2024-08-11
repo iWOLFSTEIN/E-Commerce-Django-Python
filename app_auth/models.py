@@ -55,7 +55,7 @@ class Login(models.Model):
 
 class UserVerification(models.Model):
     user = models.ForeignKey(to=User, on_delete=models.CASCADE)
-    otp = models.IntegerField(max_length=6, default=-111111)
+    otp = models.IntegerField(default=-111111)
     otp_attempt_counter = models.IntegerField(default=-1)
     next_possible_attempt = models.DateTimeField()
     secret_key = models.CharField(max_length=32, default="")
