@@ -43,8 +43,7 @@ def get_token_for_user(user) -> str:
     return str(refresh.access_token)
 
 
-def send_otp(user: User):
-    user_verification = UserVerification(user=user, secret_key=pyotp.random_base32())
+def send_otp(user: User, user_verification: UserVerification):
     user_verification.otp = int(
         generate_otp(user=user, user_verification=user_verification)
     )
@@ -118,7 +117,10 @@ class Auth:
             user = serializer.save()
             token = get_token_for_user(user)
             try:
-                send_otp(user=user)
+                user_verification = UserVerification(
+                    user=user, secret_key=pyotp.random_base32()
+                )
+                send_otp(user=user, user_verification=user_verification)
                 pass
             except Exception as e:
                 print("console error:" + e.__str__())
@@ -165,15 +167,46 @@ class Auth:
         if not serializer.is_valid():
             return get_error_response(serializer.errors, status=400)
 
-        user_verification = UserVerification.objects.get(user=user)
+        try:
+            user_verification = UserVerification.objects.get(user=user)
+        except Exception as _:
+            return Response({"error": "No verification object was found"}, status=404)
         hotp = pyotp.HOTP(user_verification.secret_key)
         is_verified = hotp.verify(
             request.data.get("otp"), user_verification.otp_attempt_counter
         )
         if not is_verified:
-            return Response({"status": False, "message": "Invalid otp"}, status=401)
+            return Response({"status:": False, "error": "Invalid otp"}, status=401)
 
         user.is_verified = is_verified
         user.save()
 
-        return Response({"status": True, "message": "Otp verification is successful"})
+        return Response(
+            {"status:": True, "message": "Otp verification is successful"}, status=200
+        )
+
+    @verify_jwt_token
+    def request_otp(request, user: User):
+        try:
+            user_verification = UserVerification.objects.get(user=user)
+        except Exception as _:
+            return Response({"error": "No verification object was found"}, status=404)
+
+        try:
+            send_otp(user=user, user_verification=user_verification)
+            return Response(
+                {
+                    "status:": True,
+                    "message": "Otp is sent",
+                    "info": "Please check your email for the otp",
+                },
+                status=200,
+            )
+        except Exception as _:
+            return Response(
+                {
+                    "status:": False,
+                    "error": "This request cannot be processed right now, please come back later",
+                },
+                status=403,
+            )
