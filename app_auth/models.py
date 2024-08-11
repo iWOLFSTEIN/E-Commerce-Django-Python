@@ -62,5 +62,4 @@ class UserVerification(models.Model):
 
 
 class OtpVerification(models.Model):
-    userId = models.CharField(max_length=24, null=False, blank=False)
     otp = models.IntegerField()
