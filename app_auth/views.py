@@ -15,7 +15,6 @@ class Login(APIView):
 class Otp(APIView):
     def post(self, request, format=None):
         return Auth.verify_otp(request)
-    
+
     def get(self, request, format=None):
         return Auth.request_otp(request)
-
