@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 import environ
 import os
@@ -82,6 +83,13 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     )
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=365),  # Set access token expiry time
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=365),  # Set refresh token expiry time
+    "ROTATE_REFRESH_TOKENS": False,  # Rotate refresh tokens after use
+    "BLACKLIST_AFTER_ROTATION": True,  # Blacklist old refresh tokens after rotation
 }
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases

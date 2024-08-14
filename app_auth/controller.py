@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 
 def verify_jwt_token(func):
     @wraps(func)
-    def decorator(request):
+    def decorator(request, *args, **kwargs):
         token = str(request.auth)
         try:
             payload = jwt.decode(
@@ -27,7 +27,7 @@ def verify_jwt_token(func):
             if not user.is_active:
                 user.is_active = True
                 user.save()
-            return func(request, user)
+            return func(request, user, *args, **kwargs)
         except jwt.ExpiredSignatureError as e:
             print(e)
             return Response({"error": "Token expired"}, status=401)
