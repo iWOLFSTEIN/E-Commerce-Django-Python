@@ -12,7 +12,7 @@ class Product(models.Model):
         max_digits=6, decimal_places=2, null=True, blank=True
     )
     rating = models.DecimalField(max_digits=6, decimal_places=2)
-    thumbnail = models.ImageField()
+    thumbnail = models.TextField()
 
     pagination_class = PageNumberPagination
 

@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-from django.contrib.auth.models import AbstractUser, Group, Permission
+from django.contrib.auth.models import AbstractUser
 
 from app_auth.managers import UserManager
 
@@ -13,23 +13,6 @@ class User(AbstractUser):
     is_verified = models.BooleanField(default=False)
     first_name = models.CharField(max_length=150, null=False, blank=False)
     last_name = models.CharField(max_length=150, null=False, blank=False)
-    ordering = "email"
-
-    groups = models.ManyToManyField(
-        Group,
-        related_name="custom_user_set",
-        blank=True,
-        help_text="The groups this user belongs to.",
-        verbose_name="groups",
-    )
-
-    user_permissions = models.ManyToManyField(
-        Permission,
-        related_name="custom_user_permissions_set",
-        blank=True,
-        help_text="Specific permissions for this user.",
-        verbose_name="user permissions",
-    )
 
     objects = UserManager()
 
