@@ -2,6 +2,13 @@ from app_auth.controller import verify_jwt_token, get_error_response
 from products.models import Product
 from products.serializer import ProductReviewSerializer, ProductSerializer
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+
+
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class ProductsController:
@@ -16,6 +23,13 @@ class ProductsController:
             {"productId": product.id, "message": "Product created successfully"},
             status=200,
         )
+
+    def get_products(request, *args, **kargs):
+        products = Product.objects.order_by('id')
+        paginator = CustomPagination()
+        paginated_products = paginator.paginate_queryset(products, request=request)
+        serializer = ProductSerializer(paginated_products, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class ProductReviewsController:
